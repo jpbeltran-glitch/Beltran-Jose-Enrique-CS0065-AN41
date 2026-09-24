@@ -1,1 +1,141 @@
+"""Random walk simulation using AgentPy.
+
+Install requirements with: python -m pip install agentpy matplotlib
+Run with: python TA1_random_walk.py
+"""
+import random
+import agentpy as ap
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+
+class RandomWalker(ap.Agent):
+    """One walker with a complete position history."""
+
+    def step(self):
+        self.position = self.model.next_position(self)
+        self.path.append(self.position)
+
+
+class RandomWalkModel(ap.Model):
+    """Bounded grid model with random and collision-avoiding rules."""
+
+    def setup(self):
+        self.grid_width, self.grid_height = self.p.grid_size
+        self.rule = self.p.rule
+        self.agents = ap.AgentList(self, self.p.agents, RandomWalker)
+        # Start walkers at random cells and keep the initial cell in each path.
+        for agent in self.agents:
+            agent.position = (
+                self.random.randrange(self.grid_width),
+                self.random.randrange(self.grid_height),
+            )
+            agent.path = [agent.position]
+
+    def next_position(self, agent):
+        x, y = agent.position
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+
+        if self.rule == "avoid_east":
+            # Do not enter a cell occupied by another walker when a free
+            # neighboring cell exists. Prefer east while retaining randomness.
+            occupied = {other.position for other in self.agents if other is not agent}
+            candidates = []
+            for dx, dy in directions:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < self.grid_width and 0 <= ny < self.grid_height:
+                    if (nx, ny) not in occupied:
+                        candidates.append((dx, dy))
+            if not candidates:
+                return agent.position
+            weights = [4 if direction == (1, 0) else 1 for direction in candidates]
+            dx, dy = self.random.choices(candidates, weights=weights, k=1)[0]
+        else:
+            dx, dy = self.random.choice(directions)
+
+        # Clamp each coordinate so a walker cannot cross the grid boundary.
+        return (
+            max(0, min(self.grid_width - 1, x + dx)),
+            max(0, min(self.grid_height - 1, y + dy)),
+        )
+
+    def step(self):
+        # AgentPy calls this once per simulation tick.
+        self.agents.step()
+
+
+def run_simulation(agents, grid_size, steps, seed=42, rule="random"):
+    """Run one reproducible model and return the completed AgentPy model."""
+    parameters = {
+        "agents": int(agents),
+        "grid_size": (int(grid_size), int(grid_size)),
+        "steps": int(steps),
+        "rule": rule,
+        "seed": int(seed),
+    }
+    model = RandomWalkModel(parameters)
+    model.run(steps=int(steps), seed=int(seed), display=False)
+    return model
+
+
+def print_summary(model):
+    """Print final coordinates, unique occupied cells, and each recorded path."""
+    print(f"Rule: {model.rule}; grid: {model.grid_width} x {model.grid_height}; "
+          f"agents: {len(model.agents)}; steps: {model.p.steps}; seed: {model.p.seed}")
+    occupied = {}
+    for agent in model.agents:
+        occupied[agent.position] = occupied.get(agent.position, 0) + 1
+    print(f"Unique final cells: {len(occupied)} / {len(model.agents)} agents")
+    for agent in model.agents:
+        print(f"Agent {agent.id}: final={agent.position}; path={agent.path}")
+
+
+def animate_model(model):
+    """Animate the recorded paths, including the starting positions."""
+    fig, ax = plt.subplots(figsize=(7, 7))
+    ax.set_xlim(-0.5, model.grid_width - 0.5)
+    ax.set_ylim(-0.5, model.grid_height - 0.5)
+    ax.set_xticks(range(model.grid_width))
+    ax.set_yticks(range(model.grid_height))
+    ax.grid(True, alpha=0.4)
+    ax.set_aspect("equal")
+    ax.set_title(f"Random walk: {len(model.agents)} agents, step 0")
+    initial = [agent.path[0] for agent in model.agents]
+    scatter = ax.scatter([p[0] for p in initial], [p[1] for p in initial], s=90, c=range(len(model.agents)), cmap="tab20")
+
+    def update(frame):
+        positions = [agent.path[frame] for agent in model.agents]
+        scatter.set_offsets(positions)
+        ax.set_title(f"Random walk: {len(model.agents)} agents, step {frame}")
+        return (scatter,)
+
+    animation = FuncAnimation(
+        fig, update, frames=model.p.steps + 1, interval=350,
+        blit=False, repeat=False,
+    )
+    plt.show()
+    return animation  # Keep the animation alive until the window closes.
+
+
+def main():
+    print("Random Walk Simulation Using AgentPy")
+    agents = int(input("Enter number of agents (e.g., 5): "))
+    grid_size = int(input("Enter grid size (e.g., 10 for 10x10): "))
+    steps = int(input("Enter number of steps (e.g., 20): "))
+    rule_choice = input("Movement rule [1=random, 2=avoid collisions/prefer east]: ").strip()
+    rule = "avoid_east" if rule_choice == "2" else "random"
+
+    if agents < 1 or grid_size < 1 or steps < 1:
+        raise ValueError("Agents, grid size, and steps must each be at least 1.")
+
+    model = run_simulation(agents, grid_size, steps, seed=42, rule=rule)
+    print_summary(model)
+    animate_model(model)
+
+
+if __name__ == "__main__":
+    main()
+
+
+
 
