@@ -1,12 +1,10 @@
-"""Random walk simulation using AgentPy.
+!pip install agentpy matplotlib
 
-Install requirements with: python -m pip install agentpy matplotlib
-Run with: python TA1_random_walk.py
-"""
 import random
 import agentpy as ap
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from IPython.display import HTML # Added import for HTML
 
 
 class RandomWalker(ap.Agent):
@@ -110,17 +108,16 @@ def animate_model(model):
         return (scatter,)
 
     animation = FuncAnimation(
-        fig, update, frames=model.p.steps + 1, interval=350,
+        fig, update, frames=model.p.steps + 1, interval=100,
         blit=False, repeat=False,
     )
-    plt.show()
-    return animation  # Keep the animation alive until the window closes.
+    return animation
 
 
 def main():
     print("Random Walk Simulation Using AgentPy")
     agents = int(input("Enter number of agents (e.g., 5): "))
-    grid_size = int(input("Enter grid size (e.g., 10 for 10x10): "))
+    grid_size = int(input("Enter grid size (e.g., 10): ")) # Clarified input prompt
     steps = int(input("Enter number of steps (e.g., 20): "))
     rule_choice = input("Movement rule [1=random, 2=avoid collisions/prefer east]: ").strip()
     rule = "avoid_east" if rule_choice == "2" else "random"
@@ -130,12 +127,9 @@ def main():
 
     model = run_simulation(agents, grid_size, steps, seed=42, rule=rule)
     print_summary(model)
-    animate_model(model)
+    return animate_model(model)
 
 
 if __name__ == "__main__":
-    main()
-
-
-
-
+    anim = main() # Assign to a variable to keep the animation object alive
+    display(HTML(anim.to_jshtml())) # Explicitly display the animation as HTML
