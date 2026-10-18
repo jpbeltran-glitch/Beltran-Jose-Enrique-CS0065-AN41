@@ -1,0 +1,135 @@
+%%writefile TA2_Beltran.py
+"""CS0065 Technical Assessment 2: Rule-Based Vacuum Cleaner Agent.
+
+Required tasks: python TA2_Beltran.py
+Optional bonus: python TA2_Beltran.py --bonus
+Repeatable bonus example: python TA2_Beltran.py --bonus --seed 7
+"""
+
+import argparse
+import random
+
+
+# Task 1: Read valid room states and represent rooms in a dictionary.
+def read_room_state(room):
+    while True:
+        state = input(f"Initial state of room {room} (dirty/clean): ")
+        state = state.strip().capitalize()
+        if state in ("Dirty", "Clean"):
+            return state
+        print("Invalid state. Please enter dirty or clean.")
+
+
+def read_steps():
+    while True:
+        try:
+            steps = int(input("Number of simulation steps (0 or more): "))
+            if steps >= 0:
+                return steps
+        except ValueError:
+            pass
+        print("Invalid steps. Please enter a whole number of 0 or more.")
+
+
+def is_dirty(environment, room):
+    return environment[room] == "Dirty"
+
+
+def clean_room(environment, room):
+    environment[room] = "Clean"
+
+
+def format_environment(environment):
+    return " | ".join(f"{room}: {state}"
+                      for room, state in environment.items())
+
+
+# Task 2: The agent chooses exactly one action from its current percept.
+class VacuumAgent:
+    def __init__(self, environment):
+        self.environment = environment
+        self.location = "A"
+
+    def perceive_and_act(self):
+        if is_dirty(self.environment, self.location):
+            # Rule 1: Clean the current dirty room without moving.
+            clean_room(self.environment, self.location)
+            return f"Cleaned room {self.location}"
+
+        # Rule 2: Move when the current room is already clean.
+        previous = self.location
+        self.move()
+        return f"Moved from {previous} to {self.location}"
+
+    def move(self):
+        self.location = "B" if self.location == "A" else "A"
+
+
+# Bonus: Inspect all rooms to select a random dirty destination.
+class BonusVacuumAgent(VacuumAgent):
+    def __init__(self, environment, rng):
+        super().__init__(environment)
+        self.rng = rng
+
+    def move(self):
+        other_rooms = [room for room in self.environment
+                       if room != self.location]
+        dirty_rooms = [room for room in other_rooms
+                       if is_dirty(self.environment, room)]
+        # If all rooms are clean, keep moving to another room.
+        self.location = self.rng.choice(dirty_rooms or other_rooms)
+
+
+def show_grid(environment, location):
+    cells = []
+    for room, state in environment.items():
+        marker = "V" if room == location else " "
+        cells.append(f"[{room}: {state:<5} {marker}]")
+    print("Grid: " + " ".join(cells))
+
+
+# Task 3: Display inputs, each action, and the resulting environment.
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--bonus", action="store_true",
+                        help="use three rooms and random destinations")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="optional random seed for the bonus mode")
+    args = parser.parse_args()
+
+    mode = "Bonus - three rooms" if args.bonus else "Required - two rooms"
+    print("RULE-BASED VACUUM CLEANER")
+    print(f"Mode: {mode}")
+    rooms = ("A", "B", "C") if args.bonus else ("A", "B")
+    environment = {room: read_room_state(room) for room in rooms}
+    steps = read_steps()
+
+    if args.bonus:
+        agent = BonusVacuumAgent(environment, random.Random(args.seed))
+    else:
+        agent = VacuumAgent(environment)
+
+    print("\nInitial environment: " + format_environment(environment))
+    print(f"Starting location: {agent.location}")
+    if args.bonus:
+        print("Grid legend: V = vacuum cleaner")
+        show_grid(environment, agent.location)
+
+    # Run the full requested count, even when all rooms are clean.
+    for step in range(1, steps + 1):
+        action = agent.perceive_and_act()
+        print(f"\nStep {step}: {action}")
+        print(f"Current location: {agent.location}")
+        print("Environment: " + format_environment(environment))
+        if args.bonus:
+            show_grid(environment, agent.location)
+
+    print("\nFinal environment: " + format_environment(environment))
+    if all(state == "Clean" for state in environment.values()):
+        print("All rooms are clean.")
+    else:
+        print("Some rooms remain dirty because the step limit was reached.")
+
+
+if __name__ == "__main__":
+    main()
