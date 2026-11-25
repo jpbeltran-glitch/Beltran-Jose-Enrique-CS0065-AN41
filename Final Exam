@@ -1,0 +1,41 @@
+"""Student Academic Advising Expert System."""
+
+def advise(attendance, average, missed_tasks, stress, study_hours):
+    recommendations, reasons = [], []
+    if attendance < 75:
+        recommendations.append("Meet with an academic adviser about attendance.")
+        reasons.append("attendance is below 75%")
+    if average < 75:
+        recommendations.append("Join a tutoring or subject-support program.")
+        reasons.append("the academic average is below 75")
+    if missed_tasks >= 3:
+        recommendations.append("Create a weekly task schedule and prioritize deadlines.")
+        reasons.append("three or more tasks were missed")
+    if stress >= 4:
+        recommendations.append("Contact the student counseling or wellness office.")
+        reasons.append("reported stress is high")
+    if study_hours < 5:
+        recommendations.append("Set a regular study routine of at least 5 hours per week.")
+        reasons.append("weekly study time is below 5 hours")
+    if not recommendations:
+        recommendations.append("Maintain your current routine and continue monitoring your progress.")
+        reasons.append("no high-risk indicators were detected")
+    return recommendations, reasons
+
+def main():
+    print("\nSTUDENT ACADEMIC ADVISING EXPERT SYSTEM")
+    prompts = [
+        "Attendance percentage (0-100): ", "Current grade average (0-100): ",
+        "Missed tasks this month: ", "Stress level (1-5): ", "Study hours per week: "
+    ]
+    values = [int(input(prompt)) for prompt in prompts]
+    recommendations, reasons = advise(*values)
+    print("\n--- SYSTEM RECOMMENDATION ---")
+    for number, recommendation in enumerate(recommendations, 1):
+        print(f"{number}. {recommendation}")
+    print("\nReasoning: " + "; ".join(reasons) + ".")
+    print("\nNote: This is an educational decision-support prototype, not a diagnosis.")
+    input("\nPress Enter to close the program...")
+
+if _name_ == "_main_":
+    main()
